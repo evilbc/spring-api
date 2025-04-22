@@ -4,6 +4,7 @@ import com.codewithmosh.store.dtos.ChangePasswordRequest;
 import com.codewithmosh.store.dtos.RegisterUserRequest;
 import com.codewithmosh.store.dtos.UpdateUserRequest;
 import com.codewithmosh.store.dtos.UserDto;
+import com.codewithmosh.store.entities.Role;
 import com.codewithmosh.store.entities.User;
 import com.codewithmosh.store.mappers.UserMapper;
 import com.codewithmosh.store.repositories.UserRepository;
@@ -12,12 +13,11 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -28,6 +28,7 @@ import java.util.Set;
 public class UserController {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping
     public Iterable<UserDto> getAllUsers(@RequestParam(required = false, defaultValue = "") String sort) {
@@ -47,15 +48,20 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createUser(@Valid @RequestBody RegisterUserRequest request,
-                                        UriComponentsBuilder uriBuilder) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterUserRequest request,
+                                          UriComponentsBuilder uriBuilder) {
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body(Map.of("email", "Email is already registered"));
         }
+
         User user = userMapper.toEntity(request);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRole(Role.USER);
         userRepository.save(user);
+
         URI uri = uriBuilder.path("/users/{id}").buildAndExpand(user.getId()).toUri();
         UserDto dto = userMapper.toDto(user);
+
         return ResponseEntity.created(uri).body(dto);
     }
 
@@ -63,8 +69,10 @@ public class UserController {
     public ResponseEntity<UserDto> updateUser(@RequestBody UpdateUserRequest request, @PathVariable Long id) {
         Optional<User> user = userRepository.findById(id);
         if (user.isEmpty()) return ResponseEntity.notFound().build();
+
         userMapper.update(request, user.get());
         userRepository.save(user.get());
+
         return ResponseEntity.ok(userMapper.toDto(user.get()));
     }
 
