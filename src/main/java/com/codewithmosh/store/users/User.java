@@ -14,7 +14,6 @@ import java.util.Set;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @Entity
 @Table(name = "users")
 public class User {
@@ -38,7 +37,6 @@ public class User {
     private Role role;
 
     @OneToMany(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true)
-    @Builder.Default
     private List<Address> addresses = new ArrayList<>();
 
     public void addAddress(Address address) {

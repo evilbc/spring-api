@@ -10,12 +10,14 @@ import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import com.stripe.param.checkout.SessionCreateParams;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class StripePaymentGateway implements PaymentGateway {
     @Value("${websiteUrl}")
@@ -30,13 +32,13 @@ public class StripePaymentGateway implements PaymentGateway {
                     .setMode(SessionCreateParams.Mode.PAYMENT)
                     .setSuccessUrl(websiteUrl + "/checkout-success?orderId=" + order.getId())
                     .setCancelUrl(websiteUrl + "/checkout-cancel")
-                    .putMetadata("order_id", order.getId().toString());
+                    .setPaymentIntentData(createPaymentIntent(order));
 
             order.getItems().stream().map(this::createLineItem).forEach(builder::addLineItem);
             var session = Session.create(builder.build());
             return new CheckoutSession(session.getUrl());
         } catch (StripeException e) {
-            System.out.println(e.getMessage());
+            log.error("Error creating stripe checkout session", e);
             throw new PaymentException("Error creating checkout session", e);
         }
     }
@@ -59,7 +61,7 @@ public class StripePaymentGateway implements PaymentGateway {
                 default -> Optional.empty();
             };
         } catch (SignatureVerificationException e) {
-            System.out.println(e.getMessage());
+            log.error("Stripe signature exception", e);
             throw new PaymentException("Signature exception", e);
         }
     }
@@ -91,5 +93,10 @@ public class StripePaymentGateway implements PaymentGateway {
         return SessionCreateParams.LineItem.PriceData.ProductData.builder()
                 .setName(item.getProduct().getName())
                 .build();
+    }
+
+    private SessionCreateParams.PaymentIntentData createPaymentIntent(Order order) {
+        return SessionCreateParams.PaymentIntentData.builder()
+                .putMetadata("order_id", order.getId().toString()).build();
     }
 }
