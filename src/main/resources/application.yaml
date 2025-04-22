@@ -9,5 +9,9 @@ spring:
     show-sql: true
   jwt:
     secret: ${JWT_SECRET}
-    accessTokenExpiration: 1800 # 30 min
-    refreshTokenExpiration: 604800 # 7 days
+    accessTokenExpiration: 7200 # 2h
+    refreshTokenExpiration: 604800 # 7d
+stripe:
+  secretKey: ${STRIPE_SECRET_KEY}
+  webhookSecretKey: ${STRIPE_WEBHOOK_SECRET_KEY}
+websiteUrl: http://localhost:4000
