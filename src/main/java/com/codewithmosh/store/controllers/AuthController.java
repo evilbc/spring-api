@@ -4,6 +4,7 @@ import com.codewithmosh.store.config.JwtConfig;
 import com.codewithmosh.store.dtos.JwtResponse;
 import com.codewithmosh.store.dtos.LoginRequest;
 import com.codewithmosh.store.dtos.UserDto;
+import com.codewithmosh.store.services.AuthService;
 import com.codewithmosh.store.services.Jwt;
 import com.codewithmosh.store.mappers.UserMapper;
 import com.codewithmosh.store.repositories.UserRepository;
@@ -29,6 +30,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final JwtConfig jwtConfig;
+    private final AuthService authService;
 
     @PostMapping("/login")
     public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest request,
@@ -75,10 +77,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<UserDto> me() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        var id = (Long) authentication.getPrincipal();
-
-        var user = userRepository.findById(id).orElse(null);
+        var user = authService.getCurrentUser();
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
